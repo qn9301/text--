@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<style>
+	body{
+		-webkit-transform: translate3d(0,0,0);
+		-moz-transform: translate3d(0,0,0);
+		-ms-transform: translate3d(0,0,0);
+		-o-transform: translate3d(0,0,0);
+		transform: translate3d(0,0,0);
+	}
+    #canvas {
+        display: block;
+        border: 1px solid;
+        margin: auto;
+    }
+</style>
+<script>
+    window.onload = function () {
+    	var canvas = document.getElementById("canvas");
+    	var context = canvas.getContext('2d');
+    	var deep = 30;
+    	var radius = 3;
+    	var width = canvas.width;
+    	var height = canvas.height;
+    	var sin_r = 0;
+    	var rgb_color = [];
+    	// 将字写在canvas上
+    	var text = "RECOVER";
+    	function drawText(text){
+    		context.save();
+    		context.clearRect(0,0,width,height)
+    		context.font = "250px 微软雅黑 bold";
+        	context.fillStyle = "rgba(168,168,168,1)";
+    		context.textAlign = "center";
+    		context.textBaseline = "middle";
+    		context.fillText(text, width/2, height/2);
+    		context.restore();
+    	}
+    	// 将这个数据变成一个对象储存
+    	/*
+			x ：x轴坐标
+			y ：y轴坐标
+			z ：z轴坐标
+			r ：半径
+			rgba ： 色彩
+    	*/
+    	var Dot = function (x,y,z,r,rgb){
+    		this.pianyi = 30 * Math.PI * Math.random();
+    		this.dx = x
+    		this.dy = y
+    		this.dz = 0
+    		this.x  = Math.ceil(width * Math.random())
+    		this.y  = Math.ceil(height * Math.random())
+    		this.z  = Math.ceil(deep * Math.random()) - deep/2;
+    		this.tx = Math.ceil(width * Math.random())
+    		this.ty = Math.ceil(width * Math.random())
+    		this.tz = Math.ceil(deep * Math.random()) - deep/2;
+    		this.r  = r
+    		// this.rgb = rgb
+    		if(rgb){
+    			this.rgb = [Math.ceil((50 * Math.random() - 25)+rgb[0]),Math.ceil((50 * Math.random() - 25)+rgb[1]),Math.ceil((50 * Math.random() - 25) + rgb[2])];
+    		}else{
+	    		this.rgb = [Math.ceil((50 * Math.random() - 25)+200),Math.ceil((50 * Math.random() - 25)+100),Math.ceil((50 * Math.random() - 25) + 0)];
+    		}
+    	}
+
+    	/*
+			将点花在canvas上
+    	*/
+    	Dot.prototype = {
+    		paint: function (){
+    			context.save();
+    			context.beginPath();
+    			var scale = deep / (deep + this.z) * (deep / (deep + this.z));
+    			// 增加每一个粒子的发散度
+    			context.arc(width/2+(this.x-width/2)*scale, height/2+(this.y-height/2)*scale, 
+    				this.r * scale * (1.2+0.3 * Math.sin(sin_r+this.pianyi)), 
+    				0, Math.PI*2);
+    			context.fillStyle = "rgba("+this.rgb[0]+","+this.rgb[1]+","+this.rgb[2]+","+scale*(1.2+0.3 * Math.sin(sin_r+this.pianyi))+")";
+    			context.fill();
+    			context.restore();
+    		}
+    	}
+    	// var dot = new Dot(0, 100, 0, radius,[255,0,0]);
+    	// dot.paint();
+    	/*
+			从文字中获取需要的点
+    	*/
+    	function getDots(text, rgb){
+    		drawText(text);
+    		var data = context.getImageData(0, 0, width, height);
+    		context.clearRect(0, 0, width, height);
+    		var step = radius;
+    		var Dots = [];
+    		for(var i=0;i<height;i+=step*2){
+    			for(var j=0;j<width;j+=step*2){
+    				var position = (width*i + j) * 4;
+    				if(data.data[position+3]>0){
+    					Dots.push( new Dot(j, i, 0, radius-0.5, rgb) );
+    				}
+    			}
+    		}
+    		return Dots;
+    	}
+    	var Dots = getDots(text);
+
+    	// for(var i in Dots){
+    	// 	Dots[i].paint();
+    	// }
+
+
+    	var animate = function (){
+    		var lastTime;
+    		var derection = true;
+    		var pause = false;
+    		document.getElementById("startBtn").onclick = function (){
+    			if(!pause){
+    				return false;
+    			}
+    			derection = true;
+    			pause = false;
+    			text = document.getElementById("content").value
+    			Dots = getDots(text, rgb_color)
+    			// animate();
+    		}
+
+    		return function (){
+    			sin_r+=0.1;
+    			var thistime = +new Date();
+            	context.clearRect(0, 0, width, height);
+    			derection || (pause = true);
+    			for(var i in Dots){
+    				if(derection){
+    					if( Math.abs(Dots[i].x-Dots[i].dx)<0.1 && 
+    						Math.abs(Dots[i].y-Dots[i].dy)<0.1 && 
+    						Math.abs(Dots[i].z-Dots[i].dz)<0.1){
+    						Dots[i].x = Dots[i].dx;
+    						Dots[i].y = Dots[i].dy;
+    						Dots[i].z = Dots[i].dz;
+    						if(thistime - lastTime > 300)derection = false;
+    					}else{
+    						Dots[i].x = Dots[i].x + (Dots[i].dx - Dots[i].x) * 0.05;
+    						Dots[i].y = Dots[i].y + (Dots[i].dy - Dots[i].y) * 0.05;
+    						Dots[i].z = Dots[i].z + (Dots[i].dz - Dots[i].z) * 0.05;
+    						lastTime = +new Date();
+    					}
+    				} 
+    				else 
+    				{
+    					if( Math.abs(Dots[i].x-Dots[i].tx)<0.1 && 
+    						Math.abs(Dots[i].y-Dots[i].ty)<0.1 && 
+    						Math.abs(Dots[i].z-Dots[i].tz)<0.1){
+    						Dots[i].x = Dots[i].tx;
+    						Dots[i].y = Dots[i].ty;
+    						Dots[i].z = Dots[i].tz;
+    					}else{
+    						Dots[i].x = Dots[i].x + (Dots[i].tx - Dots[i].x) * 0.05;
+    						Dots[i].y = Dots[i].y + (Dots[i].ty - Dots[i].y) * 0.05;
+    						Dots[i].z = Dots[i].z + (Dots[i].tz - Dots[i].z) * 0.05;
+    						pause = false;
+    					}
+    				}
+    				Dots[i].paint()
+    			}
+		    	// new Dot(498,186,0,9,[168,168,168]).paint();
+		    	// if(!pause){
+			        if ("requestAnimationFrame" in window) {
+			            requestAnimationFrame(animate);
+			        }
+			        else if ("webkitRequestAnimationFrame" in window) {
+			            webkitRequestAnimationFrame(animate);
+			        }
+			        else if ("msRequestAnimationFrame" in window) {
+			            msRequestAnimationFrame(animate);
+			        }
+			        else if ("mozRequestAnimationFrame" in window) {
+			            mozRequestAnimationFrame(animate);
+			        }
+		    	// }
+    		}
+    	}()
+
+    	animate();
+    	function colorChange(){
+    		var red   = parseInt(getById("red").value / 100 * 255);
+    		var green = parseInt(getById("green").value / 100 * 255);
+    		var blue  = parseInt(getById("blue").value / 100 * 255);
+    		rgb_color[0] = red;
+    		rgb_color[1] = green;
+    		rgb_color[2] = blue;
+    		var str = getRGBStr(red,green,blue);
+    		getById("colorstr").innerHTML = str;
+    		getById("color").style.backgroundColor = str;
+    	}
+
+    	function getRGBStr(r,g,b){
+    		return "rgba("+r+","+g+","+b+",1)";
+    	}
+
+    	function getById(id){
+    		return document.getElementById(id)
+    	};
+
+    	getById("red").onchange = colorChange;
+    	getById("green").onchange = colorChange;
+    	getById("blue").onchange = colorChange;
+    }
+</script>
+<title>操控字体的数据</title>
+</head>
+<body>
+<div>
+    <canvas id='canvas' width="1000" height="500">浏览器不支持canvas</canvas>
+    <div style="width:150px;margin:10px auto">
+        <input type="text"  name="" id="content" style="width:80px;" value="RECOVER">
+        <input type="range" name="" id="red" style="width:200px;">
+        <input type="range" name="" id="green" style="width:200px;">
+        <input type="range" name="" id="blue" style="width:200px;">
+        <div id="color" style="width:50px;height:20px;background-color: rgba(200,100,0,1)"></div>
+        <div id="colorstr">rgba(200,100,0,1)</div>
+        <button id="startBtn">开始</button>
+    </div>
+</div>
+</body>
+</html>
